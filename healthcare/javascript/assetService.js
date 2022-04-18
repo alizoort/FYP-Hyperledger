@@ -9,8 +9,25 @@
 const { Gateway, Wallets } = require('fabric-network');
 const fs = require('fs');
 const path = require('path');
+const config=require('./config.json');
 class AssetService {
     async createProfile(enrollmentID,profileNumber,firstName,lastName,gender,age){
+        const addAssetsConfigFile=path.resolve(__dirname,'addAssets.json');
+        const channelid=config.channelid;
+        let nextAssetNumber;
+        let addAssetsConfig;
+        if(fs.existsSync(addAssetsConfigFile)){
+            console.log("HERE");
+            let addAssetConfigJSON = fs.readFileSync(addAssetsConfigFile,'utf8');
+            addAssetsConfig=JSON.parse(addAssetConfigJSON);
+            nextAssetNumber = addAssetsConfig.nextAssetNumber;
+        }
+        else{
+            nextAssetNumber=1;
+            addAssetsConfig= new Object;
+            addAssetsConfig.nextAssetNumber=nextAssetNumber;
+            fs.writeFileSync(addAssetsConfigFile,JSON.stringify(addAssetsConfig,null,2))
+        }
         const ccpPath = path.resolve(__dirname, '..', '..', 'test-network', 'organizations', 'peerOrganizations', 'org1.example.com', 'connection-org1.json');
         let ccp = JSON.parse(fs.readFileSync(ccpPath, 'utf8'));
 
@@ -44,8 +61,10 @@ class AssetService {
             // Submit the specified transaction.
             // createCar transaction - requires 5 argument, ex: ('createCar', 'CAR12', 'Honda', 'Accord', 'Black', 'Tom')
             // changeCarOwner transaction - requires 2 args , ex: ('changeCarOwner', 'CAR12', 'Dave')
-           let result= await contract.submitTransaction('createProfile', profileNumber, firstName, lastName, age,gender);
+           let result= await contract.submitTransaction('createProfile', nextAssetNumber, firstName, lastName, age,gender);
             console.log('Transaction has been submitted');
+            addAssetsConfig.nextAssetNumber=nextAssetNumber+1;
+            fs.writeFileSync(addAssetsConfigFile, JSON.stringify(addAssetsConfig, null, 2));
             return result? JSON.parse(result):result;
             // Disconnect from the gateway.
             

@@ -1,0 +1,3 @@
+{"index":{"fields":["doseVal","drug","drugType","doseUnit"]},"ddoc":"indexPrescriptionDoc","name":"indexPrescription","type":"json"}
+
+

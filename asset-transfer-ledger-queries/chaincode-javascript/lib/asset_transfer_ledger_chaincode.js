@@ -247,13 +247,10 @@ class Chaincode extends Contract {
 	// GetQueryResultForQueryString executes the passed in query string.
 	// Result set is built and returned as a byte array containing the JSON results.
 	async GetQueryResultForQueryString(ctx, queryString) {
-
 		let resultsIterator = await ctx.stub.getQueryResult(queryString);
 		let results = await this._GetAllResults(resultsIterator, false);
-
 		return JSON.stringify(results);
 	}
-
 	// Example: Pagination with Range Query
 	// GetAssetsByRangeWithPagination performs a range query based on the start & end key,
 	// page size and a bookmark.

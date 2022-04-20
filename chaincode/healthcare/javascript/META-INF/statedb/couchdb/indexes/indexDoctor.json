@@ -1,0 +1,1 @@
+{"index":{"fields":["firstName","lastName","specialization","organizationName","address"]},"ddoc":"indexDoctorDoc", "name":"indexDoctor","type":"json"}

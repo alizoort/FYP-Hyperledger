@@ -4,6 +4,9 @@ const { Gateway, Wallets } = require('fabric-network');
 const path = require('path');
 const fs = require('fs');
 class QueryService {
+    constructor(){
+        this.gateway=new Gateway();
+    }
     async queryAllProfiles(enrollmentID){
         try {
             // load the network configuration
@@ -24,11 +27,11 @@ class QueryService {
             }
     
             // Create a new gateway for connecting to our peer node.
-            const gateway = new Gateway();
-            await gateway.connect(ccp, { wallet, identity: enrollmentID, discovery: { enabled: true, asLocalhost: true } });
+            this.gateway = new Gateway();
+            await this.gateway.connect(ccp, { wallet, identity: enrollmentID, discovery: { enabled: true, asLocalhost: true } });
     
             // Get the network (channel) our contract is deployed to.
-            const network = await gateway.getNetwork('mychannel');
+            const network = await this.gateway.getNetwork('mychannel');
     
             // Get the contract from the network.
             const contract = network.getContract('healthcare');
@@ -48,7 +51,7 @@ class QueryService {
         }
         finally {
             console.log('Disconnect from Fabric gateway');
-            await gateway.disconnect();
+            await this.gateway.disconnect();
             
         }
     }
@@ -72,11 +75,11 @@ class QueryService {
             }
     
             // Create a new gateway for connecting to our peer node.
-            const gateway = new Gateway();
-            await gateway.connect(ccp, { wallet, identity: enrollmentID, discovery: { enabled: true, asLocalhost: true } });
+            this.gateway = new Gateway();
+            await this.gateway.connect(ccp, { wallet, identity: enrollmentID, discovery: { enabled: true, asLocalhost: true } });
     
             // Get the network (channel) our contract is deployed to.
-            const network = await gateway.getNetwork('mychannel');
+            const network = await this.gateway.getNetwork('mychannel');
     
             // Get the contract from the network.
             const contract = await network.getContract('healthcare');
@@ -97,7 +100,7 @@ class QueryService {
         }
         finally{
             console.log('Disconnect from Fabric gateway');
-            await gateway.disconnect();
+            await this.gateway.disconnect();
         }
     }
 }

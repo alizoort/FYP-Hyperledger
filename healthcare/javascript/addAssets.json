@@ -1,3 +1,5 @@
 {
-  "nextAssetNumber": 22
+  "nextPatientNumber": 4,
+  "nextDoctorNumber": 4,
+  "nextPrescriptionNumber": 4
 }

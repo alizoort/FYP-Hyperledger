@@ -11,64 +11,178 @@ const fs = require('fs');
 const path = require('path');
 const config=require('./config.json');
 class AssetService {
-    async createProfile(enrollmentID,profileNumber,firstName,lastName,gender,age){
-        const addAssetsConfigFile=path.resolve(__dirname,'addAssets.json');
-        const channelid=config.channelid;
-        let nextAssetNumber;
-        let addAssetsConfig;
-        if(fs.existsSync(addAssetsConfigFile)){
-            console.log("HERE");
-            let addAssetConfigJSON = fs.readFileSync(addAssetsConfigFile,'utf8');
-            addAssetsConfig=JSON.parse(addAssetConfigJSON);
-            nextAssetNumber = addAssetsConfig.nextAssetNumber;
-        }
-        else{
-            nextAssetNumber=1;
-            addAssetsConfig= new Object;
-            addAssetsConfig.nextAssetNumber=nextAssetNumber;
-            fs.writeFileSync(addAssetsConfigFile,JSON.stringify(addAssetsConfig,null,2))
-        }
+    constructor(){
+        this.gateway=new Gateway();
+    }
+    async getContractInstance(enrollmentID){
         const ccpPath = path.resolve(__dirname, '..', '..', 'test-network', 'organizations', 'peerOrganizations', 'org1.example.com', 'connection-org1.json');
         let ccp = JSON.parse(fs.readFileSync(ccpPath, 'utf8'));
-
-        // Create a new file system based wallet for managing identities.
         const walletPath = path.join(process.cwd(), 'wallet');
         const wallet = await Wallets.newFileSystemWallet(walletPath);
-        
-            // load the network configuration
-          
-            console.log(`Wallet path: ${walletPath}`);
-    
-            // Check to see if we've already enrolled the user.
             const identity = await wallet.get(enrollmentID);
             if (!identity) {
                 console.log('An identity for the user "appUser" does not exist in the wallet');
                 console.log('Run the registerUser.js application before retrying');
                 return;
             }
-    
-            // Create a new gateway for connecting to our peer node.
-            const gateway = new Gateway();
-            await gateway.connect(ccp, { wallet, identity: enrollmentID, discovery: { enabled: true, asLocalhost: true } });
-    console.log("CONNECTED",gateway);
-            // Get the network (channel) our contract is deployed to.
-        try{    const network = await gateway.getNetwork('mychannel');
-            console.log("NETWORK",network)
-    
-            // Get the contract from the network.
+            this.gateway = new Gateway();
+            await this.gateway.connect(ccp, { wallet, identity: enrollmentID, discovery: { enabled: true, asLocalhost: true } });
+            const network = await this.gateway.getNetwork('mychannel');
             const contract = await network.getContract('healthcare');
-    console.log("CONGTRACT",contract)
-            // Submit the specified transaction.
-            // createCar transaction - requires 5 argument, ex: ('createCar', 'CAR12', 'Honda', 'Accord', 'Black', 'Tom')
-            // changeCarOwner transaction - requires 2 args , ex: ('changeCarOwner', 'CAR12', 'Dave')
-           let result= await contract.submitTransaction('createProfile', nextAssetNumber, firstName, lastName, age,gender);
+            return contract;
+    }
+    async getAssetByRange(enrollmentID,assetName1,assetName2){
+        const contract = await this.getContractInstance(enrollmentID);
+        let result = await contract.evaluateTransaction('GetAssetByRange',assetName1,assetName2);
+        return result;
+    }
+    async readAsset(enrollmentID,assetName){
+        const contract = await this.getContractInstance(enrollmentID);
+        let result =await contract.evaluateTransaction('ReadAsset',assetName);
+        return result;
+    }
+    async isAssetPresent(enrollmentID,assetName){
+        const contract = this.getContractInstance(enrollmentID);
+        let result = await contract.evaluateTransaction('AssetExists',assetName);
+        return result;
+    }
+    async queryWithPagination(enrollmentID,fieldsObject,index,indexName,pageSize,bookmark){
+        let queryString={};
+        queryString.selector={};
+        queryString.use_index=[index,indexName];
+        Object.keys(fieldsObject).forEach(key=>{
+            queryString.selector[key]=fieldsObject[key];
+        })
+        const contract = await this.getContractInstance(enrollmentID);
+        let result = await contract.evaluateTransaction('QueryAssetsWithPagination',JSON.stringify(queryString),pageSize,bookmark);
+        return result;
+    }
+    async queryAsset(enrollmentID,fieldsObject,index,indexName){
+        let queryString={};
+        queryString.selector={};
+        queryString.use_index=[index,indexName];
+        Object.keys(fieldsObject).forEach(key=>{
+            queryString.selector[key]=fieldsObject[key];
+        })
+        console.log("QUERYSTRING",queryString);
+        const contract = await this.getContractInstance(enrollmentID);
+        let result = contract.evaluateTransaction('QueryAssets',JSON.stringify(queryString));
+        return result;  
+    }
+    async createDrugPrescription(enrollmentID,doseVal,doseUnit,drug,drugType,patientNumber,doctorNumber){
+        const addAssetsConfigFile=path.resolve(__dirname,'addAssets.json');
+        const channelid=config.channelid;
+        let nextPrescriptionNumber;
+        let addAssetsConfig;
+        if(fs.existsSync(addAssetsConfigFile)){
+            let addAssetConfigJSON=fs.readFileSync(addAssetsConfigFile,'utf8');
+            addAssetsConfig=JSON.parse(addAssetConfigJSON);
+            nextPrescriptionNumber=addAssetsConfig.nextPrescriptionNumber;
+            if(addAssetsConfig.nextPrescriptionNumber){ nextPrescriptionNumber = addAssetsConfig.nextPrescriptionNumber} 
+            else {
+                nextPrescriptionNumber=1;
+                addAssetsConfig.nextPrescriptionNumber=nextPrescriptionNumber;
+                fs.writeFileSync(addAssetsConfigFile,JSON.stringify(addAssetsConfig,null,2))
+            }
+        }
+        else {
+            nextDoctorNumber=1;
+            addAssetsConfig= new Object;
+            addAssetsConfig.nextPrescriptionNumber=nextPrescriptionNumber;
+            fs.writeFileSync(addAssetsConfigFile,JSON.stringify(addAssetsConfig,null,2));
+        }
+        const contract= await this.getContractInstance(enrollmentID);
+        try{ 
+            let result= await contract.submitTransaction('createDrugPrescription', nextPrescriptionNumber,doseVal,doseUnit,drug,drugType,patientNumber,doctorNumber);
+             addAssetsConfig.nextPrescriptionNumber=nextPrescriptionNumber+1;
+             fs.writeFileSync(addAssetsConfigFile, JSON.stringify(addAssetsConfig, null, 2));
+             return result? JSON.parse(result):result;
+         } 
+         catch (error) {
+             console.log(`Error processing transaction ${error}`);
+             console.log(error.stack);
+             throw ({ status: 500, message: `Error processing transaction. ${error}` });
+         }
+         finally{
+             console.log('Disconnect from Fabric gateway');
+             await this.gateway.disconnect();
+         }
+    }
+    async createDoctor(enrollmentID,firstName,lastName, gender, phoneNumber, address, organizationName, specialization){
+        const addAssetsConfigFile=path.resolve(__dirname,'addAssets.json');
+        const channelid=config.channelid;
+        let nextDoctorNumber;
+        let addAssetsConfig;
+        if(fs.existsSync(addAssetsConfigFile)){
+            let addAssetConfigJSON=fs.readFileSync(addAssetsConfigFile,'utf8');
+            addAssetsConfig=JSON.parse(addAssetConfigJSON);
+            nextDoctorNumber=addAssetsConfig.nextDoctorNumber;
+            if(addAssetsConfig.nextDoctorNumber){ nextDoctorNumber = addAssetsConfig.nextDoctorNumber} 
+            else {
+                nextDoctorNumber=1;
+                addAssetsConfig.nextDoctorNumber=nextDoctorNumber;
+                fs.writeFileSync(addAssetsConfigFile,JSON.stringify(addAssetsConfig,null,2))
+            }
+        }
+        else {
+            nextDoctorNumber=1;
+            addAssetsConfig= new Object;
+            addAssetsConfig.nextDoctorNumber=nextDoctorNumber;
+            fs.writeFileSync(addAssetsConfigFile,JSON.stringify(addAssetsConfig,null,2));
+        }
+        const contract= await this.getContractInstance(enrollmentID);
+        try{ 
+            let result= await contract.submitTransaction('createDoctorProfile', nextDoctorNumber, firstName, lastName, gender, phoneNumber,address, organizationName,specialization);
+             addAssetsConfig.nextDoctorNumber=nextDoctorNumber+1;
+             fs.writeFileSync(addAssetsConfigFile, JSON.stringify(addAssetsConfig, null, 2));
+             return result? JSON.parse(result):result;
+         } 
+         catch (error) {
+             console.log(`Error processing transaction ${error}`);
+             console.log(error.stack);
+             throw ({ status: 500, message: `Error processing transaction. ${error}` });
+         }
+         finally{
+             console.log('Disconnect from Fabric gateway');
+             await this.gateway.disconnect();
+         }
+    }
+
+    async createPatient(enrollmentID,firstName,lastName,gender,bloodType,age,dob,dod,phoneNumber,address){
+        const addAssetsConfigFile=path.resolve(__dirname,'addAssets.json');
+        const channelid=config.channelid;
+        let nextPatientNumber;
+        let addAssetsConfig;
+        console.log("INSIDE PATIENT")
+        if(fs.existsSync(addAssetsConfigFile)){
+            let addAssetConfigJSON=fs.readFileSync(addAssetsConfigFile,'utf8');
+            addAssetsConfig=JSON.parse(addAssetConfigJSON);
+           // nextPatientNumber=addAssetsConfig.nextPatientNumber;
+           console.log(addAssetConfigJSON.nextPatientNumber)
+            if(addAssetsConfig.nextPatientNumber){ 
+                console.log("INSIDE IF")
+                nextPatientNumber = addAssetsConfig.nextPatientNumber} 
+            else {
+                nextPatientNumber=1;
+                addAssetsConfig.nextPatientNumber=nextPatientNumber;
+                fs.writeFileSync(addAssetsConfigFile,JSON.stringify(addAssetsConfig,null,2))
+            }
+        }
+        else{
+            nextPatientNumber=1;
+            addAssetsConfig= new Object;
+            addAssetsConfig.nextPatientNumber=nextPatientNumber;
+            fs.writeFileSync(addAssetsConfigFile,JSON.stringify(addAssetsConfig,null,2));
+        }
+        console.log("BEFORE CONTRACT")
+       const contract = await this.getContractInstance(enrollmentID);
+       console.log("HERE",contract);
+       try{ 
+           let result= await contract.submitTransaction('createPatientProfile', nextPatientNumber, firstName, lastName, age,gender,bloodType,dob,dod,phoneNumber,address);
             console.log('Transaction has been submitted');
-            addAssetsConfig.nextAssetNumber=nextAssetNumber+1;
+            addAssetsConfig.nextPatientNumber=nextPatientNumber+1;
             fs.writeFileSync(addAssetsConfigFile, JSON.stringify(addAssetsConfig, null, 2));
             return result? JSON.parse(result):result;
-            // Disconnect from the gateway.
-            
-    
         } 
         catch (error) {
             console.log(`Error processing transaction ${error}`);
@@ -77,7 +191,46 @@ class AssetService {
         }
         finally{
             console.log('Disconnect from Fabric gateway');
-            await gateway.disconnect();
+            await this.gateway.disconnect();
+        }
+    }
+    async createProfile(enrollmentID,profileNumber,firstName,lastName,gender,age){
+        const addAssetsConfigFile=path.resolve(__dirname,'addAssets.json');
+        const channelid=config.channelid;
+        let nextAssetNumber;
+        let addAssetsConfig;
+        if(fs.existsSync(addAssetsConfigFile)){
+            let addAssetConfigJSON = fs.readFileSync(addAssetsConfigFile,'utf8');
+            addAssetsConfig=JSON.parse(addAssetConfigJSON);
+          //  nextAssetNumber = addAssetsConfig.nextAssetNumber;
+            if(addAssetsConfig.nextAssetNumber){ nextAssetNumber = addAssetsConfig.nextAssetNumber} 
+            else {
+                nextAssetNumber=1;
+                addAssetsConfig.nextAssetNumber=nextAssetNumber;
+                fs.writeFileSync(addAssetsConfigFile,JSON.stringify(addAssetsConfig,null,2))
+            }
+        }
+        else{
+            nextAssetNumber=1;
+            addAssetsConfig= new Object;
+            addAssetsConfig.nextAssetNumber=nextAssetNumber;
+            fs.writeFileSync(addAssetsConfigFile,JSON.stringify(addAssetsConfig,null,2))
+        }
+           const contract =await  this.getContractInstance(enrollmentID);
+           try{
+           let result= await contract.submitTransaction('createProfile', nextAssetNumber, firstName, lastName, age,gender);
+            addAssetsConfig.nextAssetNumber=nextAssetNumber+1;
+            fs.writeFileSync(addAssetsConfigFile, JSON.stringify(addAssetsConfig, null, 2));
+            return result? JSON.parse(result):result;
+        } 
+        catch (error) {
+            console.log(`Error processing transaction ${error}`);
+            console.log(error.stack);
+            throw ({ status: 500, message: `Error processing transaction. ${error}` });
+        }
+        finally{
+            console.log('Disconnect from Fabric gateway');
+            await this.gateway.disconnect();
         }
     }
 }

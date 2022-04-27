@@ -44,7 +44,7 @@ class EnrollmentService {
                 mspId: 'Org1MSP',
                 type: 'X.509',
             };
-            await wallet.put('admin', x509Identity);
+            return await wallet.put('admin', x509Identity);
             console.log('Successfully enrolled admin user "admin" and imported it into the wallet');
     
         } catch (error) {

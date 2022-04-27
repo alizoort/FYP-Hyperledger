@@ -120,6 +120,7 @@ class HealthCare extends Contract {
 		return allResults;
 	}
     async createPatientProfile(ctx,patientNumber , firstName,lastName, age, gender,bloodType,dob,dod,phoneNumber,address){
+        if(ctx.clientIdentity.getAttributeValue('actorType').toString()==='admin'){
         const patient = {
             firstName,
             lastName,
@@ -138,6 +139,10 @@ class HealthCare extends Contract {
             record=val;
         }
         return JSON.stringify(record);
+    }
+    else {
+        return "INVALID REQUEST"
+    }
     }
     async createDrugPrescription(ctx,prescriptionNumber,doseVal,doseUnit,drug,drugType,patientNumber,doctorNumber){
         const drugPrescription= {

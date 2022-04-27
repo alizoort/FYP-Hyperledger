@@ -69,6 +69,16 @@ class AssetService {
         let result = contract.evaluateTransaction('QueryAssets',JSON.stringify(queryString));
         return result;  
     }
+    async queryByField(enrollmentID,field,index,indexName){
+        let queryString={};
+        queryString.selector={};
+        console.log("FIELD",field)
+        queryString.selector[field.name]={"$eq":field.value};
+        queryString.use_index=[index,indexName];
+        const contract=await this.getContractInstance(enrollmentID);
+        let result= contract.evaluateTransaction('QueryAssets',JSON.stringify(queryString))
+        return result;
+    }
     async createDrugPrescription(enrollmentID,doseVal,doseUnit,drug,drugType,patientNumber,doctorNumber){
         const addAssetsConfigFile=path.resolve(__dirname,'addAssets.json');
         const channelid=config.channelid;
@@ -148,7 +158,7 @@ class AssetService {
          }
     }
 
-    async createPatient(enrollmentID,firstName,lastName,gender,bloodType,age,dob,dod,phoneNumber,address){
+    async createPatient(enrollmentID,firstName,lastName,age,gender,bloodType,dob,dod,phoneNumber,address){
         const addAssetsConfigFile=path.resolve(__dirname,'addAssets.json');
         const channelid=config.channelid;
         let nextPatientNumber;

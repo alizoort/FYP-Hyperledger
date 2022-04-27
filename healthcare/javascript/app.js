@@ -26,8 +26,9 @@ const enrollSvcInstance = new EnrollmentService();
 const registerSvcInstance = new RegisterUserService();
 app.post('/enrollAdmin',async (req,res,next)=>{
     try {
-        const result = enrollSvcInstance.enrollAdmin();
+        const result = await enrollSvcInstance.enrollAdmin();
         console.log("Result",result);
+        return res.status(200).json(`Success enroll ${result}`)
     }
     catch(error){
         return res.status(500).json(error);
@@ -39,7 +40,7 @@ app.post('/registerUser',async (req,res,next)=>{
         if(!username || username.length<1){
             return res.status(500).json("User is missing");
         }
-        const result= registerSvcInstance.registerUser(username,req.body.actorTypr);
+        const result= registerSvcInstance.registerUser(username,req.body.actorType);
         console.log("Successfully called register user !!!");
         return res.status(200).json(`Successfully register the user ${username}`);
     }
@@ -115,6 +116,16 @@ app.get('/queryAsset',async (req,res,next)=>{
     try {
         const result = await assetSvcInstance.queryAsset(req.body.adminId,req.body.fields,req.body.index,req.body.indexName)
         console.log(result)
+        return res.status(200).json(JSON.parse(result.toString()));
+    }
+    catch(error){
+        return res.status(500).json(error);
+    }
+})
+app.get('/getAccordingToField',async (req,res,next)=>{
+    try {
+        const result =await assetSvcInstance.queryByField(req.body.adminId,req.body.field,req.body.index,req.body.indexName);
+        console.log(result);
         return res.status(200).json(JSON.parse(result.toString()));
     }
     catch(error){

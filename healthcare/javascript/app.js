@@ -76,6 +76,15 @@ app.post('/createDrugPrescription',async (req,res,next)=>{
         return res.status(500).json(error);
     }
 })
+app.post('/createPatientAppointment',(req,res,next)=>{
+    try {
+        const result = assetSvcInstance.createPatientAppointment(req.body.adminId,req.body.dateOfAppointment,req.body.patientNumber,req.body.doctorNumber,req.body.time);
+        return res.status(200).json(`Successfully create appointment ${result}`);
+    }
+    catch (error){
+        return res.status(500).json(error)
+    }
+})
 app.get('/getAssetByRange',async (req,res,next)=>{
     try {
         const result = assetSvcInstance.getAssetByRange(req.body.adminId,req.body.assetName1,req.body.assetName2);
@@ -116,6 +125,45 @@ app.get('/queryAsset',async (req,res,next)=>{
     try {
         const result = await assetSvcInstance.queryAsset(req.body.adminId,req.body.fields,req.body.index,req.body.indexName)
         console.log(result)
+        return res.status(200).json(JSON.parse(result.toString()));
+    }
+    catch(error){
+        return res.status(500).json(error);
+    }
+})
+app.get('/queryAssetHistory', async (req,res,next)=>{
+    try {
+        const result = await assetSvcInstance.getAssetHistory(req.body.adminId,req.body.assetName);
+        console.log("RESULT",result);
+        return res.status(200).json(JSON.parse(result.toString()));
+    }
+    catch(error){
+        return res.status(500).json(error);
+    }
+})
+app.post('/modifyPatient',async (req,res,next)=>{
+    try {
+        console.log('modify',req.body.adminId)
+        const result =await assetSvcInstance.modifyPatient(req.body.adminId,req.body.assetName,req.body.firstName,req.body.lastName,req.body.age,req.body.gender,req.body.bloodType,req.body.dob,req.body.dod,req.body.phoneNumber,req.body.address);
+        return res.status(200).json(JSON.parse(result.toString()));
+    }
+    catch(error){
+        return res.status(500).json(error)
+    }
+})
+app.post('/modifyPatientAppointment',async (req,res,next)=>{
+    try {
+       const result = await assetSvcInstance.modifyAppointment(req.body.adminId,req.body.assetName,req.body.dateOfAppointment,req.body.doctorNumber,req.body.time);
+       return res.status(200).json(JSON.parse(result.toString())); 
+    }
+    catch(error){
+        return res.status(500).json(error);
+    }
+}
+)
+app.post('/modifyPatientPrescription',async (req,res,next)=>{
+    try {
+        const result = await assetSvcInstance.modifyPrescription(req.body.adminId,req.body.assetName,req.body.doseVal,req.body.doseUnit,req.body.drug,req.body.drugType,req.body.patientNumber,req.body.doctorNumber);
         return res.status(200).json(JSON.parse(result.toString()));
     }
     catch(error){

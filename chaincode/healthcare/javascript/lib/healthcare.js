@@ -163,6 +163,23 @@ class HealthCare extends Contract {
         }
         return JSON.stringify(record);
     }
+    async createPatientAppointment(ctx,appointmentNumber,dateOfAppointment,patientNumber,doctorNumber,time){
+        const appointment={
+            dateOfAppointment,
+            patientNumber,
+            doctorNumber,
+            time
+        }
+        let record;
+        let val = await ctx.stub.putState("APPOINTMENT"+appointmentNumber,Buffer.from(JSON.stringify(appointment)));
+        try {
+            record = JSON.parse(val);
+        }
+        catch(err){
+            record = val;
+        }
+        return JSON.stringify(record);
+    }
     async createDoctorProfile(ctx,doctorNumber,firstName,lastName,gender,phoneNumber,address,organizationName,specialization){
         const doctorProfile = {
             firstName,
@@ -232,6 +249,72 @@ class HealthCare extends Contract {
             record=strValue;
         }
         return JSON.stringify({Key:key,Record:record});
+    }
+    async changePatientProfile(ctx,patientNumber,firstName,lastName, age, gender,bloodType,dob,dod,phoneNumber,address){
+        const profileAsBytes=await ctx.stub.getState(patientNumber);
+        if(!profileAsBytes || profileAsBytes.length===0){
+            throw new Error(`${profileAsBytes} does not exist`);
+        }
+        let patient=JSON.parse(profileAsBytes.toString());
+        patient.firstName=firstName;
+        patient.lastName=lastName;
+        patient.age=age;
+        patient.gender=gender;
+        patient.bloodType=bloodType;
+        patient.dod=dod;
+        patient.dob=dob;
+        patient.phoneNumber=phoneNumber;
+        patient.address=address;
+        let record;
+        let val =await ctx.stub.putState(patientNumber,Buffer.from(JSON.stringify(patient)));
+        try {
+            record= JSON.parse(val)
+        }
+        catch(err){
+            record=val;
+        }
+        return JSON.stringify(record);
+    }
+    async changePatientAppointment(ctx,appNumber,dateOfAppointment,doctorNumber,time){
+        const profileAsBytes=await ctx.stub.getState(appNumber);
+        if(!profileAsBytes || profileAsBytes.length===0){
+            throw new Error(`${profileAsBytes} does not exist`);
+        }
+        let appointment=JSON.parse(profileAsBytes.toString());
+        appointment.dateOfAppointment=dateOfAppointment;
+        appointment.doctorNumber=doctorNumber;
+        appointment.time=time;
+        let record;
+        let val =await ctx.stub.putState(appNumber,Buffer.from(JSON.stringify(appointment)));
+        try {
+            record= JSON.parse(val)
+        }
+        catch(err){
+            record=val;
+        }
+        return JSON.stringify(record);
+    }
+    async changePatientPrescription(ctx,prescriptionNumber,doseVal,doseUnit,drug,drugType,patientNumber,doctorNumber){
+        const profileAsBytes=await ctx.stub.getState(prescriptionNumber);
+        if(!profileAsBytes || profileAsBytes.length===0){
+            throw new Error(`${profileAsBytes} does not exist`);
+        }
+        let prescription=JSON.parse(profileAsBytes.toString());
+        prescription.doseVal=doseVal;
+        prescription.doseUnit=doseUnit;
+        prescription.drug=drug;
+        prescription.drugType=drugType;
+        prescription.patientNumber=patientNumber;
+        prescription.doctorNumber=doctorNumber;
+        let record;
+        let val =await ctx.stub.putState(prescriptionNumber,Buffer.from(JSON.stringify(prescription)));
+        try {
+            record= JSON.parse(val)
+        }
+        catch(err){
+            record=val;
+        }
+        return JSON.stringify(record);
     }
     async changeProfileAge(ctx,profileNumber,newAge){
         console.log('======== START : change age =======');

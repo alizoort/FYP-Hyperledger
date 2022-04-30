@@ -79,6 +79,66 @@ class AssetService {
         let result= contract.evaluateTransaction('QueryAssets',JSON.stringify(queryString))
         return result;
     }
+    async getAssetHistory(enrollmentID,assetName){
+        const contract = await this.getContractInstance(enrollmentID);
+        let result = contract.submitTransaction('GetAssetHistory',assetName);
+        return result;
+    }
+
+    async modifyPatient(enrollmentID,patientNumber,firstName,lastName,age,gender,bloodType,dob,dod,phoneNumber,address){
+        const contract = await this.getContractInstance(enrollmentID);
+        let result = contract.submitTransaction('changePatientProfile',patientNumber,firstName,lastName,age,gender,bloodType,dob,dod,phoneNumber,address);
+        return result;
+    }
+    async modifyAppointment(enrollmentID,appNumber,dateOfAppointment,doctorNumber,time){
+        const contract = await this.getContractInstance(enrollmentID);
+        let result = contract.submitTransaction('changePatientAppointment',appNumber,dateOfAppointment,doctorNumber,time);
+        return result;
+    }
+    async modifyPrescription(enrollmentID,prescriptionNumber,doseVal,doseUnit,drug,drugType,patientNumber,doctorNumber){
+        const contract = await this.getContractInstance(enrollmentID);
+        let result = contract.submitTransaction('changePatientPrescription',prescriptionNumber,doseVal,doseUnit,drug,drugType,patientNumber,doctorNumber);
+        return result;
+    }
+    async createPatientAppointment(enrollmentID,dateOfAppointment,patientNumber,doctorNumber,time){
+        const addAssetsConfigFile=path.resolve(__dirname,'addAssets.json');
+        const channelid=config.channelid;
+        let nextAppNumber;
+        let addAssetsConfig;
+        if(fs.existsSync(addAssetsConfigFile)){
+            let addAssetConfigJSON=fs.readFileSync(addAssetsConfigFile,'utf8');
+            addAssetsConfig=JSON.parse(addAssetConfigJSON);
+            nextAppNumber=addAssetsConfig.nextAppNumber;
+            if(addAssetsConfig.nextAppNumber){ nextAppNumber = addAssetsConfig.nextAppNumber} 
+            else {
+                nextAppNumber=1;
+                addAssetsConfig.nextAppNumber=nextAppNumber;
+                fs.writeFileSync(addAssetsConfigFile,JSON.stringify(addAssetsConfig,null,2))
+            }
+        }
+        else {
+            nextAppNumber=1;
+            addAssetsConfig= new Object;
+            addAssetsConfig.nextAppNumber=nextAppNumber;
+            fs.writeFileSync(addAssetsConfigFile,JSON.stringify(addAssetsConfig,null,2));
+        }
+        const contract= await this.getContractInstance(enrollmentID);
+        try{ 
+            let result= await contract.submitTransaction('createPatientAppointment', nextAppNumber,dateOfAppointment,patientNumber,doctorNumber,time);
+             addAssetsConfig.nextAppNumber=nextAppNumber+1;
+             fs.writeFileSync(addAssetsConfigFile, JSON.stringify(addAssetsConfig, null, 2));
+             return result? JSON.parse(result):result;
+         } 
+         catch (error) {
+             console.log(`Error processing transaction ${error}`);
+             console.log(error.stack);
+             throw ({ status: 500, message: `Error processing transaction. ${error}` });
+         }
+         finally{
+             console.log('Disconnect from Fabric gateway');
+             await this.gateway.disconnect();
+         }
+    }
     async createDrugPrescription(enrollmentID,doseVal,doseUnit,drug,drugType,patientNumber,doctorNumber){
         const addAssetsConfigFile=path.resolve(__dirname,'addAssets.json');
         const channelid=config.channelid;
@@ -96,7 +156,7 @@ class AssetService {
             }
         }
         else {
-            nextDoctorNumber=1;
+            nextPrescriptionNumber=1;
             addAssetsConfig= new Object;
             addAssetsConfig.nextPrescriptionNumber=nextPrescriptionNumber;
             fs.writeFileSync(addAssetsConfigFile,JSON.stringify(addAssetsConfig,null,2));

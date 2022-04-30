@@ -1,5 +1,6 @@
 {
-  "nextPatientNumber": 6,
-  "nextDoctorNumber": 4,
-  "nextPrescriptionNumber": 4
+  "nextPatientNumber": 2,
+  "nextDoctorNumber": 2,
+  "nextPrescriptionNumber": 2,
+  "nextAppNumber": 2
 }

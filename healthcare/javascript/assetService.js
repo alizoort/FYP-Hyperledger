@@ -98,7 +98,11 @@ class AssetService {
         let result = contract.submitTransaction('GetAssetHistory',assetName);
         return result;
     }
-
+    async getUserHistoricalActions(enrollmentID,assetName){
+        let result = await this.getAssetHistory(enrollmentID,assetName);
+        console.log("RESULT",JSON.parse(result.toString()))
+        return JSON.parse(result.toString()).filter(element=> element.Value.submittedBy===enrollmentID);
+    }
     async modifyPatient(enrollmentID,patientNumber,firstName,lastName,age,gender,bloodType,dob,dod,phoneNumber,address){
         const contract = await this.getContractInstance(enrollmentID);
         let result = contract.submitTransaction('changePatientProfile',enrollmentID, patientNumber,firstName,lastName,age,gender,bloodType,dob,dod,phoneNumber,address);

@@ -144,6 +144,15 @@ app.get('/queryAssetHistory', async (req,res,next)=>{
         return res.status(500).json(error);
     }
 })
+app.get('/getUserHistoricalActions',async (req,res,next)=>{
+    try {
+        const result= await assetSvcInstance.getUserHistoricalActions(req.body.adminId,req.body.assetName);
+        return res.status(200).json(result);
+    }
+    catch(error){
+        return res.status(500).json(error);
+    }
+})
 app.post('/modifyPatient',async (req,res,next)=>{
     try {
         console.log('modify',req.body.adminId)

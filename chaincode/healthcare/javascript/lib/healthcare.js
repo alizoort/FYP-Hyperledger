@@ -8,6 +8,14 @@
 const { Contract } = require('fabric-contract-api');
 class HealthCare extends Contract {
 
+    getCurrentDate(){
+        var today= new Date();
+        var date = today.getFullYear()+'-'+(today.getMonth())+'-'+today.getDate();
+        var time = today.getHours() + ":" + today.getMinutes()+":"+today.getSeconds()
+         var dateTime = date+' '+time;
+         return dateTime;
+    }
+
     async initLedger(ctx){
         console.info('============= START : Initialize Ledger ===========');
         const profiles=[
@@ -51,7 +59,12 @@ class HealthCare extends Contract {
 		return JSON.stringify(results);
 	}
     async QueryAssets(ctx,queryString){
+        if(this.checkActorTypeAttribute(ctx,"doctor") || this.checkActorTypeAttribute(ctx,"researcher")){
         return await this.GetQueryResultForQueryString(ctx,queryString);
+        }
+        else{
+            return "unauthorized";
+        }
     }
     async GetAssetsByRange(ctx, startKey, endKey) {
 
@@ -67,7 +80,11 @@ class HealthCare extends Contract {
         results.bookmark= metadata.bookmark;
         return JSON.stringify(results);
     }
+    checkActorTypeAttribute(ctx,attrName){
+        return ctx.clientIdentity.getAttributeValue("actorType").toString()===attrName;
+    }
     async queryProfile(ctx,profileNumber){
+        if(this.checkActorTypeAttribute(ctx,"doctor") || this.checkActorTypeAttribute(ctx,"researcher")){
         const profileAsBytes=await ctx.stub.getState(profileNumber);
         if(!profileAsBytes || profileAsBytes.length===0){
             throw new Error(`${profileNumber} does not exist`);
@@ -75,12 +92,20 @@ class HealthCare extends Contract {
         console.log(profileAsBytes.toString());
         return profileAsBytes.toString();
     }
+    else {
+        return "unauthorized";
+    }
+    }
     async GetAssetHistory(ctx, assetName) {
-
+        if(this.checkActorTypeAttribute(ctx,"doctor") || this.checkActorTypeAttribute(ctx,"patient")){
 		let resultsIterator = await ctx.stub.getHistoryForKey(assetName);
 		let results = await this._GetAllResults(resultsIterator, true);
 
 		return JSON.stringify(results);
+        }
+        else {
+            return "unauthorized";
+        }
 	}
     async AssetExists(ctx, assetName) {
 		// ==== Check if asset already exists ====
@@ -119,8 +144,9 @@ class HealthCare extends Contract {
 		iterator.close();
 		return allResults;
 	}
-    async createPatientProfile(ctx,patientNumber , firstName,lastName, age, gender,bloodType,dob,dod,phoneNumber,address){
-        if(ctx.clientIdentity.getAttributeValue('actorType').toString()==='admin'){
+    async createPatientProfile(ctx,submittedBy, patientNumber ,firstName,lastName, age, gender,bloodType,dob,dod,phoneNumber,address){
+        if(this.checkActorTypeAttribute(ctx,"doctor")){
+        let dateTime= this.getCurrentDate();
         const patient = {
             firstName,
             lastName,
@@ -128,7 +154,7 @@ class HealthCare extends Contract {
             gender,
             bloodType,
             dob,dod,
-            phoneNumber,address
+            phoneNumber,address,submittedBy,dateTime
         }
         let record;
         let val =await ctx.stub.putState('PATIENT'+patientNumber,Buffer.from(JSON.stringify(patient)))
@@ -141,17 +167,19 @@ class HealthCare extends Contract {
         return JSON.stringify(record);
     }
     else {
-        return "INVALID REQUEST"
+        return "unauthorized"
     }
     }
-    async createDrugPrescription(ctx,prescriptionNumber,doseVal,doseUnit,drug,drugType,patientNumber,doctorNumber){
+    async createDrugPrescription(ctx,submittedBy,prescriptionNumber,doseVal,doseUnit,drug,drugType,patientNumber,doctorNumber){
+        if(this.checkActorTypeAttribute(ctx,"doctor")){
+        let dateTime= this.getCurrentDate();
         const drugPrescription= {
             doseVal,
             doseUnit,
             drug,
             drugType,
             patientNumber,
-            doctorNumber
+            doctorNumber,submittedBy,dateTime
         }
         let record;
         let val = await ctx.stub.putState('PRESCRIPTION_DRUG'+prescriptionNumber,Buffer.from(JSON.stringify(drugPrescription)));
@@ -162,13 +190,20 @@ class HealthCare extends Contract {
             record=val;
         }
         return JSON.stringify(record);
+
     }
-    async createPatientAppointment(ctx,appointmentNumber,dateOfAppointment,patientNumber,doctorNumber,time){
+    else {
+        return "unauthorized";
+    }
+    }
+    async createPatientAppointment(ctx,submittedBy,appointmentNumber,dateOfAppointment,patientNumber,doctorNumber,time){
+        if(this.checkActorTypeAttribute(ctx,"patient") || this.checkActorTypeAttribute(ctx,"doctor")){
+            let dateTime=this.getCurrentDate();
         const appointment={
             dateOfAppointment,
             patientNumber,
             doctorNumber,
-            time
+            time,submittedBy,dateTime
         }
         let record;
         let val = await ctx.stub.putState("APPOINTMENT"+appointmentNumber,Buffer.from(JSON.stringify(appointment)));
@@ -180,7 +215,12 @@ class HealthCare extends Contract {
         }
         return JSON.stringify(record);
     }
-    async createDoctorProfile(ctx,doctorNumber,firstName,lastName,gender,phoneNumber,address,organizationName,specialization){
+    else {
+        return "unauthorized";
+    }
+    }
+    async createDoctorProfile(ctx,submittedBy,doctorNumber,firstName,lastName,gender,phoneNumber,address,organizationName,specialization){
+        let dateTime= this.getCurrentDate();
         const doctorProfile = {
             firstName,
             lastName,
@@ -188,7 +228,7 @@ class HealthCare extends Contract {
             phoneNumber,
             address,
             organizationName,
-            specialization
+            specialization,submittedBy,dateTime
         }
         let record;
         let val = await ctx.stub.putState("DOCTOR"+doctorNumber,Buffer.from(JSON.stringify(doctorProfile)));
@@ -200,13 +240,14 @@ class HealthCare extends Contract {
         }
         return JSON.stringify(record);
     }
-    async createProfile(ctx,profileNumber,firstName,lastName,age,gender){
+    async createProfile(ctx,submittedBy,profileNumber,firstName,lastName,age,gender){
         console.log('======= START : Create Profile ========');
+        let dateTime= this.getCurrentDate();
         const profile = {
             firstName,
             lastName,
             gender,
-            age
+            age,submittedBy,dateTime
         }
         let record;
         let val= await ctx.stub.putState('PROFILE'+profileNumber,Buffer.from(JSON.stringify(profile)));
@@ -220,6 +261,7 @@ class HealthCare extends Contract {
         return JSON.stringify(record);
     }
     async queryAllProfiles(ctx){
+        if(this.checkActorTypeAttribute(ctx,"researcher") || this.checkActorTypeAttribute(ctx,"doctor")){
         const startKey='';
         const endKey='';
         const allResults=[];
@@ -237,6 +279,10 @@ class HealthCare extends Contract {
         console.info(allResults);
         return JSON.stringify(allResults);
     }
+    else {
+        return "unauthorized";
+    }
+    }
     async queryByKey(ctx,key){
         let value = await ctx.stub.getState(key);
         const strValue=Buffer.from(value).toString('utf8');
@@ -250,11 +296,13 @@ class HealthCare extends Contract {
         }
         return JSON.stringify({Key:key,Record:record});
     }
-    async changePatientProfile(ctx,patientNumber,firstName,lastName, age, gender,bloodType,dob,dod,phoneNumber,address){
+    async changePatientProfile(ctx,submittedBy,patientNumber,firstName,lastName, age, gender,bloodType,dob,dod,phoneNumber,address){
+        if(this.checkActorTypeAttribute(ctx,"patient") || this.checkActorTypeAttribute(ctx,"doctor")){
         const profileAsBytes=await ctx.stub.getState(patientNumber);
         if(!profileAsBytes || profileAsBytes.length===0){
             throw new Error(`${profileAsBytes} does not exist`);
         }
+        let dateTime= this.getCurrentDate();
         let patient=JSON.parse(profileAsBytes.toString());
         patient.firstName=firstName;
         patient.lastName=lastName;
@@ -265,6 +313,8 @@ class HealthCare extends Contract {
         patient.dob=dob;
         patient.phoneNumber=phoneNumber;
         patient.address=address;
+        patient.submittedBy=submittedBy;
+        patient.dateTime=dateTime;
         let record;
         let val =await ctx.stub.putState(patientNumber,Buffer.from(JSON.stringify(patient)));
         try {
@@ -275,15 +325,23 @@ class HealthCare extends Contract {
         }
         return JSON.stringify(record);
     }
-    async changePatientAppointment(ctx,appNumber,dateOfAppointment,doctorNumber,time){
+    else {
+        return "unauthorized";
+    }
+    }
+    async changePatientAppointment(ctx,submittedBy,appNumber,dateOfAppointment,doctorNumber,time){
+        if(this.checkActorTypeAttribute(ctx,"doctor")){
         const profileAsBytes=await ctx.stub.getState(appNumber);
         if(!profileAsBytes || profileAsBytes.length===0){
             throw new Error(`${profileAsBytes} does not exist`);
         }
+        let dateTime= this.getCurrentDate();
         let appointment=JSON.parse(profileAsBytes.toString());
         appointment.dateOfAppointment=dateOfAppointment;
         appointment.doctorNumber=doctorNumber;
         appointment.time=time;
+        appointment.submittedBy=submittedBy;
+        appointment.dateTime=dateTime;
         let record;
         let val =await ctx.stub.putState(appNumber,Buffer.from(JSON.stringify(appointment)));
         try {
@@ -294,18 +352,26 @@ class HealthCare extends Contract {
         }
         return JSON.stringify(record);
     }
-    async changePatientPrescription(ctx,prescriptionNumber,doseVal,doseUnit,drug,drugType,patientNumber,doctorNumber){
+    else {
+        return "unauthorized";
+    }
+    }
+    async changePatientPrescription(ctx,submittedBy,prescriptionNumber,doseVal,doseUnit,drug,drugType,patientNumber,doctorNumber){
+        if(this.checkActorTypeAttribute(ctx,"doctor")){
         const profileAsBytes=await ctx.stub.getState(prescriptionNumber);
         if(!profileAsBytes || profileAsBytes.length===0){
             throw new Error(`${profileAsBytes} does not exist`);
         }
         let prescription=JSON.parse(profileAsBytes.toString());
+        let dateTime = this.getCurrentDate();
         prescription.doseVal=doseVal;
         prescription.doseUnit=doseUnit;
         prescription.drug=drug;
         prescription.drugType=drugType;
         prescription.patientNumber=patientNumber;
         prescription.doctorNumber=doctorNumber;
+        prescription.submittedBy=submittedBy;
+        prescription.dateTime=dateTime;
         let record;
         let val =await ctx.stub.putState(prescriptionNumber,Buffer.from(JSON.stringify(prescription)));
         try {
@@ -315,6 +381,10 @@ class HealthCare extends Contract {
             record=val;
         }
         return JSON.stringify(record);
+    }
+    else {
+        return "unauthorized";
+    }
     }
     async changeProfileAge(ctx,profileNumber,newAge){
         console.log('======== START : change age =======');

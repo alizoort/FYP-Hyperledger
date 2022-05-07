@@ -20,10 +20,13 @@ const AssetService = require('./assetService.js');
 const EnrollmentService = require('./enrollService.js');
 const QueryService = require('./queryService.js');
 const RegisterUserService = require('./registrationService.js');
+const MigrationService = require('./migration.js');
 const assetSvcInstance = new AssetService();
 const querySvcInstance = new QueryService();
 const enrollSvcInstance = new EnrollmentService();
 const registerSvcInstance = new RegisterUserService();
+const migrationSvcInstance = new MigrationService();
+
 app.post('/enrollAdmin',async (req,res,next)=>{
     try {
         const result = await enrollSvcInstance.enrollAdmin();
@@ -217,6 +220,24 @@ app.get('/queryAllProfiles',async (req,res,next)=>{
         return res.status(500).json(error);
       }
 })
+app.post('/writeToCouchDB',async (req,res,next)=>{
+    try {
+        const result =await  migrationSvcInstance.writeToCouchDB(req.body.key,req.body.record);
+        return res.status(200).json(result);
+    }
+    catch(error){
+        return res.status(500).json(error);
+    }
+})
+app.get('/getRecord',(async (req,res,next)=>{
+    try {
+        const result = await migrationSvcInstance.readFromCouchDB(req.body.key);
+        return res.status(200).json(result);
+    }
+    catch(error){
+        return res.status(500).json(error)
+    }
+}))
 
 var port = process.env.PORT || 30002;
 var server = app.listen(port, function () {

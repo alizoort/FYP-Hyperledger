@@ -16,6 +16,7 @@ class AssetService {
     }
     async getContractInstance(enrollmentID){
         const ccpPath = path.resolve(__dirname, '..', '..', 'test-network', 'organizations', 'peerOrganizations', 'org1.example.com', 'connection-org1.json');
+        console.log("CCPATH",ccpPath)
         let ccp = JSON.parse(fs.readFileSync(ccpPath, 'utf8'));
         const walletPath = path.join(process.cwd(), 'wallet');
         const wallet = await Wallets.newFileSystemWallet(walletPath);
@@ -27,7 +28,9 @@ class AssetService {
             }
             this.gateway = new Gateway();
             await this.gateway.connect(ccp, { wallet, identity: enrollmentID, discovery: { enabled: true, asLocalhost: true } });
+            console.log("AFTERCONNECT");
             const network = await this.gateway.getNetwork('mychannel');
+            console.log("NETWORK",network);
             const contract = await network.getContract('healthcare');
             return contract;
     }
@@ -69,6 +72,17 @@ class AssetService {
         let result = contract.evaluateTransaction('QueryAssets',JSON.stringify(queryString));
         return result;  
     }
+    async checkIfAssetExist(enrollmentID,assetToFind){
+        let queryString={};
+        queryString.selector={};
+        Object.keys(assetToFind).forEach(key=>{
+            queryString.selector[key]=assetToFind[key];
+        })
+        console.log("QUERYSTRING",queryString);
+        const contract = await this.getContractInstance(enrollmentID);
+        let result = contract.evaluateTransaction('QueryAssets',JSON.stringify(queryString));
+        return result;  
+    }
     async queryByField(enrollmentID,field,index,indexName){
         let queryString={};
         queryString.selector={};
@@ -87,17 +101,17 @@ class AssetService {
 
     async modifyPatient(enrollmentID,patientNumber,firstName,lastName,age,gender,bloodType,dob,dod,phoneNumber,address){
         const contract = await this.getContractInstance(enrollmentID);
-        let result = contract.submitTransaction('changePatientProfile',patientNumber,firstName,lastName,age,gender,bloodType,dob,dod,phoneNumber,address);
+        let result = contract.submitTransaction('changePatientProfile',enrollmentID, patientNumber,firstName,lastName,age,gender,bloodType,dob,dod,phoneNumber,address);
         return result;
     }
     async modifyAppointment(enrollmentID,appNumber,dateOfAppointment,doctorNumber,time){
         const contract = await this.getContractInstance(enrollmentID);
-        let result = contract.submitTransaction('changePatientAppointment',appNumber,dateOfAppointment,doctorNumber,time);
+        let result = contract.submitTransaction('changePatientAppointment',enrollmentID, appNumber,dateOfAppointment,doctorNumber,time);
         return result;
     }
     async modifyPrescription(enrollmentID,prescriptionNumber,doseVal,doseUnit,drug,drugType,patientNumber,doctorNumber){
         const contract = await this.getContractInstance(enrollmentID);
-        let result = contract.submitTransaction('changePatientPrescription',prescriptionNumber,doseVal,doseUnit,drug,drugType,patientNumber,doctorNumber);
+        let result = contract.submitTransaction('changePatientPrescription',enrollmentID, prescriptionNumber,doseVal,doseUnit,drug,drugType,patientNumber,doctorNumber);
         return result;
     }
     async createPatientAppointment(enrollmentID,dateOfAppointment,patientNumber,doctorNumber,time){
@@ -124,7 +138,7 @@ class AssetService {
         }
         const contract= await this.getContractInstance(enrollmentID);
         try{ 
-            let result= await contract.submitTransaction('createPatientAppointment', nextAppNumber,dateOfAppointment,patientNumber,doctorNumber,time);
+            let result= await contract.submitTransaction('createPatientAppointment', enrollmentID, nextAppNumber,dateOfAppointment,patientNumber,doctorNumber,time);
              addAssetsConfig.nextAppNumber=nextAppNumber+1;
              fs.writeFileSync(addAssetsConfigFile, JSON.stringify(addAssetsConfig, null, 2));
              return result? JSON.parse(result):result;
@@ -163,7 +177,7 @@ class AssetService {
         }
         const contract= await this.getContractInstance(enrollmentID);
         try{ 
-            let result= await contract.submitTransaction('createDrugPrescription', nextPrescriptionNumber,doseVal,doseUnit,drug,drugType,patientNumber,doctorNumber);
+            let result= await contract.submitTransaction('createDrugPrescription', enrollmentID, nextPrescriptionNumber,doseVal,doseUnit,drug,drugType,patientNumber,doctorNumber);
              addAssetsConfig.nextPrescriptionNumber=nextPrescriptionNumber+1;
              fs.writeFileSync(addAssetsConfigFile, JSON.stringify(addAssetsConfig, null, 2));
              return result? JSON.parse(result):result;
@@ -202,9 +216,10 @@ class AssetService {
         }
         const contract= await this.getContractInstance(enrollmentID);
         try{ 
-            let result= await contract.submitTransaction('createDoctorProfile', nextDoctorNumber, firstName, lastName, gender, phoneNumber,address, organizationName,specialization);
+            let result= await contract.submitTransaction('createDoctorProfile', enrollmentID,nextDoctorNumber, firstName, lastName, gender, phoneNumber,address, organizationName,specialization);
              addAssetsConfig.nextDoctorNumber=nextDoctorNumber+1;
              fs.writeFileSync(addAssetsConfigFile, JSON.stringify(addAssetsConfig, null, 2));
+             console.log("RESULT",JSON.parse(result));
              return result? JSON.parse(result):result;
          } 
          catch (error) {
@@ -219,6 +234,9 @@ class AssetService {
     }
 
     async createPatient(enrollmentID,firstName,lastName,age,gender,bloodType,dob,dod,phoneNumber,address){
+        let queryResult=await this.checkIfAssetExist(enrollmentID,{"firstName":firstName,"lastName":lastName,"age":age.toString(),"gender":gender,"bloodType":bloodType,"dob":dob,"dod":dod,"phoneNumber":phoneNumber,"address":address})
+        console.log("QYERYRESULT",JSON.parse(queryResult.toString()));
+        if(queryResult && JSON.parse(queryResult.toString()).length==0){
         const addAssetsConfigFile=path.resolve(__dirname,'addAssets.json');
         const channelid=config.channelid;
         let nextPatientNumber;
@@ -244,11 +262,11 @@ class AssetService {
             addAssetsConfig.nextPatientNumber=nextPatientNumber;
             fs.writeFileSync(addAssetsConfigFile,JSON.stringify(addAssetsConfig,null,2));
         }
-        console.log("BEFORE CONTRACT")
+        console.log("BEFORE CONTRACT",enrollmentID)
        const contract = await this.getContractInstance(enrollmentID);
        console.log("HERE",contract);
        try{ 
-           let result= await contract.submitTransaction('createPatientProfile', nextPatientNumber, firstName, lastName, age,gender,bloodType,dob,dod,phoneNumber,address);
+           let result= await contract.submitTransaction('createPatientProfile',enrollmentID, nextPatientNumber, firstName, lastName, age,gender,bloodType,dob,dod,phoneNumber,address);
             console.log('Transaction has been submitted');
             addAssetsConfig.nextPatientNumber=nextPatientNumber+1;
             fs.writeFileSync(addAssetsConfigFile, JSON.stringify(addAssetsConfig, null, 2));
@@ -263,6 +281,10 @@ class AssetService {
             console.log('Disconnect from Fabric gateway');
             await this.gateway.disconnect();
         }
+    }
+    else {
+        return "already exist";
+    }
     }
     async createProfile(enrollmentID,profileNumber,firstName,lastName,gender,age){
         const addAssetsConfigFile=path.resolve(__dirname,'addAssets.json');

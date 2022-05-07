@@ -71,6 +71,7 @@ exports.writeToCouchDB = async function (nano, dbname, key, value) {
                         reject(err);
                     }
                 });
+                console.log("INSERT",value)
             });
         }
 
@@ -79,7 +80,28 @@ exports.writeToCouchDB = async function (nano, dbname, key, value) {
     }));
 }
 
+exports.getRecord = async function (nano,dbname,key){
+    return new Promise((async  (resolve,reject)=>{
+        const db=nano.use(dbname);
+        try {
+            db.get(key, async function (err, body) {
 
+                // if the record was found, then update the revision to allow the update
+                if (err == null) {
+                    let revision = body._rev
+                    // update or insert the value
+                    resolve(body);
+                }
+                else {
+                    reject(err)
+                }
+            });
+        }
+        catch(error){
+            reject(err)
+        }
+    }))
+}
 exports.deleteRecord = async function (nano, dbname, key) {
 
     return new Promise((async (resolve, reject) => {

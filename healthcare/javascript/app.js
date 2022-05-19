@@ -53,8 +53,8 @@ app.post('/registerUser',async (req,res,next)=>{
 })
 app.post('/createPatientProfile',async (req,res,next)=>{
     try {
-        const result = assetSvcInstance.createPatient(req.body.adminId,req.body.firstName,req.body.lastName,req.body.age,req.body.gender,req.body.bloodType,req.body.dob,req.body.dod,req.body.phoneNumber,req.body.address)
-        return res.status(200).json(`Successfully create the patient profile ${result}`)
+        const result = assetSvcInstance.createPatient(req.body.adminId,req.body.firstName,req.body.lastName,0,req.body.gender,req.body.bloodType,req.body.dob,req.body.dod,req.body.phoneNumber,req.body.address)
+        return res.status(200).json(`Successfully create the patient profile`)
     
     }
     catch(error){
@@ -64,7 +64,7 @@ app.post('/createPatientProfile',async (req,res,next)=>{
 app.post('/createDoctorProfile',async (req,res,next)=>{
     try {
         const result = assetSvcInstance.createDoctor(req.body.adminId,req.body.firstName,req.body.lastName,req.body.gender,req.body.phoneNumber,req.body.address, req.body.organizationName,req.body.specialization)
-        return res.status(200).json(`Successfully create the patient profile ${result}`)
+        return res.status(200).json(`Successfully create the doctor profile`)
     }
     catch(error){
         return res.status(500).json(error);
@@ -73,7 +73,7 @@ app.post('/createDoctorProfile',async (req,res,next)=>{
 app.post('/createDrugPrescription',async (req,res,next)=>{
     try {
         const result = assetSvcInstance.createDrugPrescription(req.body.adminId,req.body.doseVal,req.body.doseUnit,req.body.drug,req.body.drugType,req.body.patientNumber,req.body.doctorNumber);
-        return res.status(200).json(`Successfully create drug prescription ${result}`);
+        return res.status(200).json(`Successfully create drug prescription`);
     }
     catch(error){
         return res.status(500).json(error);
@@ -101,6 +101,24 @@ app.get('/readAsset',async (req,res,next)=>{
     try {
         const result = await assetSvcInstance.readAsset(req.body.adminId,req.body.assetName);
         return res.status(200).json(JSON.parse(result.toString()));
+    }
+    catch(error){
+        return res.status(500).json(error);
+    }
+})
+app.get('/queryProfile',async (req,res,next)=>{
+    try {
+        const result = await assetSvcInstance.queryProfile(req.body.adminId,req.body.assetName);
+        return res.status(200).json(JSON.parse(result.toString()));
+    }
+    catch(error){
+        return res.status(500).json(error);
+    }
+})
+app.post('/grantAccess',async (req,res,next)=>{
+    try {
+        const result = await assetSvcInstance.grantAccess(req.body.assetName,req.body.adminId,req.body.grantedPerson);
+        return res.status(200).json(JSON.parse(result.toString()))
     }
     catch(error){
         return res.status(500).json(error);
@@ -156,7 +174,7 @@ app.get('/getUserHistoricalActions',async (req,res,next)=>{
 app.post('/modifyPatient',async (req,res,next)=>{
     try {
         console.log('modify',req.body.adminId)
-        const result =await assetSvcInstance.modifyPatient(req.body.adminId,req.body.assetName,req.body.firstName,req.body.lastName,req.body.age,req.body.gender,req.body.bloodType,req.body.dob,req.body.dod,req.body.phoneNumber,req.body.address);
+        const result =await assetSvcInstance.modifyPatient(req.body.adminId,req.body.assetName,req.body.firstName,req.body.lastName,req.body.age,req.body.gender,req.body.bloodType,req.body.dob,req.body.dod,req.body.phoneNumber,req.body.address,req.body.grantedPerson);
         return res.status(200).json(JSON.parse(result.toString()));
     }
     catch(error){

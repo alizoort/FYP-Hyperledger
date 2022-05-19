@@ -16,7 +16,7 @@ class AssetService {
     }
     async getContractInstance(enrollmentID){
         const ccpPath = path.resolve(__dirname, '..', '..', 'test-network', 'organizations', 'peerOrganizations', 'org1.example.com', 'connection-org1.json');
-        console.log("CCPATH",ccpPath)
+       // console.log("CCPATH",ccpPath)
         let ccp = JSON.parse(fs.readFileSync(ccpPath, 'utf8'));
         const walletPath = path.join(process.cwd(), 'wallet');
         const wallet = await Wallets.newFileSystemWallet(walletPath);
@@ -28,9 +28,9 @@ class AssetService {
             }
             this.gateway = new Gateway();
             await this.gateway.connect(ccp, { wallet, identity: enrollmentID, discovery: { enabled: true, asLocalhost: true } });
-            console.log("AFTERCONNECT");
+           // console.log("AFTERCONNECT");
             const network = await this.gateway.getNetwork('mychannel');
-            console.log("NETWORK",network);
+          //  console.log("NETWORK",network);
             const contract = await network.getContract('healthcare');
             return contract;
     }
@@ -42,6 +42,16 @@ class AssetService {
     async readAsset(enrollmentID,assetName){
         const contract = await this.getContractInstance(enrollmentID);
         let result =await contract.evaluateTransaction('ReadAsset',assetName);
+        return result;
+    }
+    async queryProfile(enrollmentID,assetName){
+        const contract = await this.getContractInstance(enrollmentID);
+        let result = await contract.evaluateTransaction('queryProfile',enrollmentID,assetName);
+        return result;
+    }
+    async grantAccess(assetName,enrollmentID, grantedPerson){
+        const contract = await this.getContractInstance(enrollmentID);
+        let result = await contract.evaluateTransaction('grantAccess',assetName,enrollmentID,grantedPerson)
         return result;
     }
     async isAssetPresent(enrollmentID,assetName){
@@ -103,9 +113,9 @@ class AssetService {
         console.log("RESULT",JSON.parse(result.toString()))
         return JSON.parse(result.toString()).filter(element=> element.Value.submittedBy===enrollmentID);
     }
-    async modifyPatient(enrollmentID,patientNumber,firstName,lastName,age,gender,bloodType,dob,dod,phoneNumber,address){
+    async modifyPatient(enrollmentID,patientNumber,firstName,lastName,age,gender,bloodType,dob,dod,phoneNumber,address,grantedPerson){
         const contract = await this.getContractInstance(enrollmentID);
-        let result = contract.submitTransaction('changePatientProfile',enrollmentID, patientNumber,firstName,lastName,age,gender,bloodType,dob,dod,phoneNumber,address);
+        let result = contract.submitTransaction('changePatientProfile',enrollmentID, patientNumber,firstName,lastName,age,gender,bloodType,dob,dod,phoneNumber,address,grantedPerson);
         return result;
     }
     async modifyAppointment(enrollmentID,appNumber,dateOfAppointment,doctorNumber,time){
